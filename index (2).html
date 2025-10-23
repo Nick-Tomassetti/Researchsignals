@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignalIQ - Sales Intelligence Platform</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
+        .signal-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Tag Input Component for multi-value inputs
+        function TagInput({ label, placeholder, items = [], onAdd, onRemove }) {
+            const [inputValue, setInputValue] = useState('');
+
+            const handleAdd = () => {
+                if (inputValue.trim()) {
+                    onAdd(inputValue);
+                    setInputValue('');
+                }
+            };
+
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAdd();
+                }
+            };
+
+            return (
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        {label}
+                    </label>
+                    <div className="flex gap-2 mb-2">
+                        <input
+                            type="text"
+                            placeholder={placeholder}
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                        />
+                        <button
+                            type="button"
+                            onClick={handleAdd}
+                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                        >
+                            Add
+                        </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {items.map((item, idx) => (
+                            <span key={idx} className="inline-flex items-center px-3 py-1.5 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">
+                                {item}
+                                <button
+                                    type="button"
+                                    onClick={() => onRemove(idx)}
+                                    className="ml-2 text-purple-600 hover:text-purple-900 font-bold"
+                                >
+                                    ×
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+        const API_URL = 'http://localhost:3001/api'; // Change to your deployed backend URL
+
+        // Real AI Research function
+        const realResearch = async (accounts, signals) => {
+            try {
+                const response = await fetch(`${API_URL}/research`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ accounts, signals })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data.results;
+            } catch (error) {
+                console.error('Research API error:', error);
+                throw error;
+            }
+        };
+
+        // Simulated research (fallback for demo/testing)
+        const simulateResearch = (account, signals) => {
+            const topics = ['AI adoption', 'digital transformation', 'cost reduction', 'cloud migration', 'expansion', 'market expansion', 'technology upgrade'];
+            const detectedSignals = [];
+            
+            // Always generate at least 1-2 signals per account for demo purposes
+            signals.forEach(signal => {
+                // 75% chance of detecting each signal (increased from 50%)
+                if (Math.random() > 0.25) {
+                    const descriptions = [
+                        `${account.company} recently mentioned "${signal.keyword}" in a company update`,
+                        `${account.company} posted about "${signal.keyword}" on their blog`,
+                        `Recent news indicates ${account.company} is focusing on ${signal.keyword}`,
+                        `${account.company}'s leadership discussed "${signal.keyword}" in an interview`,
+                        `Job postings from ${account.company} mention ${signal.keyword}`,
+                        `${account.company} announced initiatives related to ${signal.keyword}`
+                    ];
+                    
+                    detectedSignals.push({
+                        id: Date.now() + Math.random(),
+                        signalName: signal.name,
+                        topic: topics[Math.floor(Math.random() * topics.length)],
+                        description: descriptions[Math.floor(Math.random() * descriptions.length)],
+                        confidence: Math.floor(Math.random() * 30 + 70),
+                        date: new Date(Date.now() - Math.floor(Math.random() * 14 * 24 * 60 * 60 * 1000)).toISOString(),
+                        source: ['LinkedIn', 'Company Blog', 'Press Release', 'Twitter', 'TechCrunch', 'Company Website'][Math.floor(Math.random() * 6)]
+                    });
+                }
+            });
+            
+            // If no signals detected, add at least one generic signal
+            if (detectedSignals.length === 0 && signals.length > 0) {
+                detectedSignals.push({
+                    id: Date.now() + Math.random(),
+                    signalName: signals[0].name,
+                    topic: topics[0],
+                    description: `${account.company} shows activity related to "${signals[0].keyword}"`,
+                    confidence: 65,
+                    date: new Date().toISOString(),
+                    source: 'Company Website'
+                });
+            }
+            
+            return detectedSignals;
+        };
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [accounts, setAccounts] = useState([
+                { id: 1, company: 'Acme Corp', industry: 'Technology', size: '500-1000', website: 'acme.com', signals: [] },
+                { id: 2, company: 'TechStart Inc', industry: 'SaaS', size: '50-200', website: 'techstart.io', signals: [] }
+            ]);
+            const [signals, setSignals] = useState([
+                { 
+                    id: 1, 
+                    name: 'Hiring Signal - Engineering Roles', 
+                    type: 'job_posting',
+                    category: 'Growth',
+                    config: {
+                        jobTitles: ['engineer', 'developer', 'software'],
+                        keywords: ['AI', 'machine learning', 'cloud'],
+                        excludeKeywords: ['intern', 'junior'],
+                        lookbackDays: 30
+                    },
+                    prompt: 'Search for recent job postings from {company} that mention engineering or developer roles with keywords related to AI, ML, or cloud technologies. Look for postings from the last 30 days.',
+                    active: true 
+                },
+                { 
+                    id: 2, 
+                    name: 'Technology Migration Signal', 
+                    type: 'content_analysis',
+                    category: 'Technology',
+                    config: {
+                        sources: ['blog', 'press_release', 'social_media'],
+                        keywords: ['migration', 'moving to', 'adopting', 'implementing'],
+                        technologies: ['AWS', 'Azure', 'GCP', 'Salesforce'],
+                        lookbackDays: 60
+                    },
+                    prompt: 'Analyze {company}\'s blog posts, press releases, and social media for mentions of technology migrations, cloud adoption, or implementation of new platforms like AWS, Azure, or Salesforce in the last 60 days.',
+                    active: true 
+                },
+                { 
+                    id: 3, 
+                    name: 'Funding & Budget Signal', 
+                    type: 'financial',
+                    category: 'Financial',
+                    config: {
+                        events: ['funding', 'investment', 'budget approval', 'acquisition'],
+                        keywords: ['raised', 'secured', 'allocated', 'approved'],
+                        minAmount: null,
+                        lookbackDays: 90
+                    },
+                    prompt: 'Search for news about {company} raising funding, securing investment, or announcing budget allocations in the last 90 days. Look for specific dollar amounts and use cases.',
+                    active: true 
+                }
+            ]);
+            const [newAccount, setNewAccount] = useState({ company: '', industry: '', size: '', website: '' });
+            const [newSignal, setNewSignal] = useState({ 
+                name: '', 
+                type: 'job_posting',
+                category: '',
+                config: {
+                    jobTitles: [],
+                    keywords: [],
+                    excludeKeywords: [],
+                    sources: [],
+                    technologies: [],
+                    events: [],
+                    lookbackDays: 30
+                },
+                prompt: ''
+            });
+            const [showSignalBuilder, setShowSignalBuilder] = useState(false);
+            const [editingSignal, setEditingSignal] = useState(null);
+            const [isResearching, setIsResearching] = useState(false);
+            const [lastResearch, setLastResearch] = useState(null);
+
+            const [useRealAI, setUseRealAI] = useState(false); // Toggle between demo and real AI
+
+            const runResearch = async () => {
+                setIsResearching(true);
+                
+                try {
+                    if (useRealAI) {
+                        // Use real OpenAI API
+                        const results = await realResearch(accounts, signals.filter(s => s.active));
+                        
+                        // Map results back to accounts
+                        const updatedAccounts = accounts.map(account => {
+                            const result = results.find(r => r.accountId === account.id);
+                            return {
+                                ...account,
+                                signals: result ? result.signals : []
+                            };
+                        });
+                        
+                        setAccounts(updatedAccounts);
+                        setLastResearch(new Date());
+                        setIsResearching(false);
+                    } else {
+                        // Use demo/simulation
+                        setTimeout(() => {
+                            const updatedAccounts = accounts.map(account => ({
+                                ...account,
+                                signals: simulateResearch(account, signals.filter(s => s.active))
+                            }));
+                            
+                            setAccounts(updatedAccounts);
+                            setLastResearch(new Date());
+                            setIsResearching(false);
+                        }, 2000);
+                    }
+                } catch (error) {
+                    console.error('Research failed:', error);
+                    alert('Research failed. Using demo mode. Error: ' + error.message);
+                    
+                    // Fallback to simulation
+                    const updatedAccounts = accounts.map(account => ({
+                        ...account,
+                        signals: simulateResearch(account, signals.filter(s => s.active))
+                    }));
+                    
+                    setAccounts(updatedAccounts);
+                    setLastResearch(new Date());
+                    setIsResearching(false);
+                }
+            };
+
+            const addAccount = () => {
+                console.log('Add Account clicked', newAccount);
+                if (!newAccount.company || !newAccount.industry) {
+                    alert('Please fill in at least Company Name and Industry');
+                    return;
+                }
+                setAccounts([...accounts, { 
+                    id: Date.now(), 
+                    ...newAccount,
+                    signals: []
+                }]);
+                setNewAccount({ company: '', industry: '', size: '', website: '' });
+                alert('Account added successfully!');
+            };
+
+            const addSignal = () => {
+                console.log('Add Signal clicked', newSignal);
+                if (!newSignal.name || !newSignal.prompt) {
+                    alert('Please fill in Signal Name and Research Prompt');
+                    return;
+                }
+                setSignals([...signals, { 
+                    id: Date.now(), 
+                    ...newSignal,
+                    active: true
+                }]);
+                resetSignalForm();
+                setShowSignalBuilder(false);
+                alert('Signal added successfully!');
+            };
+
+            const resetSignalForm = () => {
+                setNewSignal({ 
+                    name: '', 
+                    type: 'job_posting',
+                    category: '',
+                    config: {
+                        jobTitles: [],
+                        keywords: [],
+                        excludeKeywords: [],
+                        sources: [],
+                        technologies: [],
+                        events: [],
+                        lookbackDays: 30
+                    },
+                    prompt: ''
+                });
+                setEditingSignal(null);
+            };
+
+            const editSignal = (signal) => {
+                setEditingSignal(signal.id);
+                setNewSignal({...signal});
+                setShowSignalBuilder(true);
+            };
+
+            const updateSignal = () => {
+                setSignals(signals.map(s => 
+                    s.id === editingSignal ? { ...newSignal, id: editingSignal } : s
+                ));
+                resetSignalForm();
+                setShowSignalBuilder(false);
+                alert('Signal updated successfully!');
+            };
+
+            const duplicateSignal = (signal) => {
+                const newSig = {
+                    ...signal,
+                    id: Date.now(),
+                    name: signal.name + ' (Copy)'
+                };
+                setSignals([...signals, newSig]);
+            };
+
+            const addConfigItem = (field, value) => {
+                if (!value.trim()) return;
+                setNewSignal({
+                    ...newSignal,
+                    config: {
+                        ...newSignal.config,
+                        [field]: [...(newSignal.config[field] || []), value.trim()]
+                    }
+                });
+            };
+
+            const removeConfigItem = (field, index) => {
+                setNewSignal({
+                    ...newSignal,
+                    config: {
+                        ...newSignal.config,
+                        [field]: newSignal.config[field].filter((_, i) => i !== index)
+                    }
+                });
+            };
+
+            const generatePrompt = () => {
+                let prompt = '';
+                const type = newSignal.type;
+                const config = newSignal.config;
+
+                if (type === 'job_posting') {
+                    prompt = `Search for recent job postings from {company}`;
+                    if (config.jobTitles?.length > 0) {
+                        prompt += ` for roles like ${config.jobTitles.join(', ')}`;
+                    }
+                    if (config.keywords?.length > 0) {
+                        prompt += ` that mention keywords: ${config.keywords.join(', ')}`;
+                    }
+                    if (config.excludeKeywords?.length > 0) {
+                        prompt += `. Exclude postings mentioning: ${config.excludeKeywords.join(', ')}`;
+                    }
+                    prompt += `. Look for postings from the last ${config.lookbackDays || 30} days.`;
+                } else if (type === 'content_analysis') {
+                    prompt = `Analyze {company}'s `;
+                    if (config.sources?.length > 0) {
+                        prompt += config.sources.join(', ');
+                    } else {
+                        prompt += 'online content';
+                    }
+                    if (config.keywords?.length > 0) {
+                        prompt += ` for mentions of: ${config.keywords.join(', ')}`;
+                    }
+                    if (config.technologies?.length > 0) {
+                        prompt += ` related to ${config.technologies.join(', ')}`;
+                    }
+                    prompt += ` in the last ${config.lookbackDays || 60} days.`;
+                } else if (type === 'financial') {
+                    prompt = `Search for news about {company} `;
+                    if (config.events?.length > 0) {
+                        prompt += config.events.join(', ');
+                    } else {
+                        prompt += 'financial events';
+                    }
+                    if (config.keywords?.length > 0) {
+                        prompt += ` with keywords: ${config.keywords.join(', ')}`;
+                    }
+                    prompt += ` in the last ${config.lookbackDays || 90} days.`;
+                } else if (type === 'leadership') {
+                    prompt = `Search for leadership changes at {company}`;
+                    if (config.keywords?.length > 0) {
+                        prompt += ` including: ${config.keywords.join(', ')}`;
+                    }
+                    prompt += ` in the last ${config.lookbackDays || 90} days.`;
+                } else if (type === 'custom') {
+                    prompt = newSignal.prompt || `Custom research for {company}`;
+                }
+
+                setNewSignal({ ...newSignal, prompt });
+            };
+
+            const removeAccount = (id) => {
+                setAccounts(accounts.filter(a => a.id !== id));
+            };
+
+            const removeSignal = (id) => {
+                setSignals(signals.filter(s => s.id !== id));
+            };
+
+            const toggleSignal = (id) => {
+                setSignals(signals.map(s => 
+                    s.id === id ? { ...s, active: !s.active } : s
+                ));
+            };
+
+            const getEngagementScore = (account) => {
+                if (account.signals.length === 0) return 0;
+                const avgConfidence = account.signals.reduce((acc, s) => acc + s.confidence, 0) / account.signals.length;
+                return Math.round(avgConfidence);
+            };
+
+            const getScoreColor = (score) => {
+                if (score >= 80) return 'text-green-600 bg-green-100';
+                if (score >= 60) return 'text-yellow-600 bg-yellow-100';
+                return 'text-gray-600 bg-gray-100';
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    {/* Header */}
+                    <header className="gradient-bg text-white shadow-lg">
+                        <div className="container mx-auto px-6 py-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                    <div className="bg-white rounded-lg p-2">
+                                        <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h1 className="text-3xl font-bold">SignalIQ</h1>
+                                        <p className="text-purple-100 text-sm">AI-Powered Sales Intelligence</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center space-x-4">
+                                    <div className="flex items-center space-x-2 bg-white bg-opacity-20 rounded-lg px-3 py-2">
+                                        <span className="text-sm text-white font-medium">
+                                            {useRealAI ? '🤖 Real AI' : '🎭 Demo Mode'}
+                                        </span>
+                                        <button
+                                            onClick={() => setUseRealAI(!useRealAI)}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useRealAI ? 'bg-green-500' : 'bg-gray-400'}`}
+                                            title={useRealAI ? 'Switch to Demo Mode' : 'Switch to Real AI'}
+                                        >
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useRealAI ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
+                                    </div>
+                                    <button 
+                                        onClick={runResearch}
+                                        disabled={isResearching}
+                                        className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                                            isResearching 
+                                                ? 'bg-purple-400 cursor-not-allowed' 
+                                                : 'bg-white text-purple-600 hover:bg-purple-50'
+                                        }`}
+                                    >
+                                        {isResearching ? (
+                                            <span className="flex items-center">
+                                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Researching...
+                                            </span>
+                                        ) : (
+                                            '🔍 Run Research'
+                                        )}
+                                    </button>
+                                    {lastResearch && (
+                                        <span className="text-sm text-purple-100">
+                                            Last: {lastResearch.toLocaleTimeString()}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Navigation */}
+                    <nav className="bg-white shadow-sm border-b border-gray-200">
+                        <div className="container mx-auto px-6">
+                            <div className="flex space-x-8">
+                                {['dashboard', 'accounts', 'signals'].map(tab => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                                            activeTab === tab
+                                                ? 'border-purple-600 text-purple-600'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </nav>
+
+                    {/* Main Content */}
+                    <main className="container mx-auto px-6 py-8">
+                        {activeTab === 'dashboard' && (
+                            <div>
+                                <div className="mb-8">
+                                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Account Intelligence Dashboard</h2>
+                                    <p className="text-gray-600">Monitor buying signals across your target accounts in real-time</p>
+                                </div>
+
+                                {/* Stats Overview */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-600">Total Accounts</p>
+                                                <p className="text-3xl font-bold text-gray-800 mt-1">{accounts.length}</p>
+                                            </div>
+                                            <div className="bg-blue-100 rounded-full p-3">
+                                                <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-600">Active Signals</p>
+                                                <p className="text-3xl font-bold text-gray-800 mt-1">{signals.filter(s => s.active).length}</p>
+                                            </div>
+                                            <div className="bg-purple-100 rounded-full p-3">
+                                                <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-600">Signals Detected</p>
+                                                <p className="text-3xl font-bold text-gray-800 mt-1">
+                                                    {accounts.reduce((acc, a) => acc + a.signals.length, 0)}
+                                                </p>
+                                            </div>
+                                            <div className="bg-green-100 rounded-full p-3">
+                                                <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-600">Hot Accounts</p>
+                                                <p className="text-3xl font-bold text-gray-800 mt-1">
+                                                    {accounts.filter(a => getEngagementScore(a) >= 80).length}
+                                                </p>
+                                            </div>
+                                            <div className="bg-red-100 rounded-full p-3">
+                                                <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Account Cards */}
+                                <div className="space-y-6">
+                                    {accounts.length === 0 ? (
+                                        <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-gray-200">
+                                            <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                            </svg>
+                                            <h3 className="text-xl font-semibold text-gray-700 mb-2">No accounts yet</h3>
+                                            <p className="text-gray-500 mb-6">Add target accounts to start monitoring buying signals</p>
+                                            <button 
+                                                onClick={() => setActiveTab('accounts')}
+                                                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                                            >
+                                                Add Your First Account
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        accounts.map(account => {
+                                            const score = getEngagementScore(account);
+                                            return (
+                                                <div key={account.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden card-hover">
+                                                    <div className="p-6">
+                                                        <div className="flex items-start justify-between mb-4">
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center space-x-3 mb-2">
+                                                                    <h3 className="text-xl font-bold text-gray-800">{account.company}</h3>
+                                                                    {score >= 80 && (
+                                                                        <span className="signal-pulse inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                                            🔥 Hot Lead
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                                                    <span className="flex items-center">
+                                                                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                            <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd"/>
+                                                                            <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z"/>
+                                                                        </svg>
+                                                                        {account.industry}
+                                                                    </span>
+                                                                    <span className="flex items-center">
+                                                                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                                                                        </svg>
+                                                                        {account.size} employees
+                                                                    </span>
+                                                                    <span className="flex items-center">
+                                                                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                            <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
+                                                                        </svg>
+                                                                        {account.website}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            {account.signals.length > 0 && (
+                                                                <div className={`px-4 py-2 rounded-full font-bold text-lg ${getScoreColor(score)}`}>
+                                                                    {score}%
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {account.signals.length > 0 ? (
+                                                            <div className="space-y-3 mt-4">
+                                                                <h4 className="text-sm font-semibold text-gray-700 flex items-center">
+                                                                    <svg className="w-4 h-4 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
+                                                                    </svg>
+                                                                    Detected Signals ({account.signals.length})
+                                                                </h4>
+                                                                {account.signals.map(signal => (
+                                                                    <div key={signal.id} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 border border-purple-100">
+                                                                        <div className="flex items-start justify-between mb-2">
+                                                                            <div className="flex-1">
+                                                                                <div className="flex items-center space-x-2 mb-1">
+                                                                                    <span className="font-semibold text-gray-800">{signal.signalName}</span>
+                                                                                    <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
+                                                                                        {signal.topic}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <p className="text-sm text-gray-700 mb-2">{signal.description}</p>
+                                                                                <div className="flex items-center space-x-4 text-xs text-gray-600">
+                                                                                    <span className="flex items-center">
+                                                                                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                                            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
+                                                                                        </svg>
+                                                                                        {new Date(signal.date).toLocaleDateString()}
+                                                                                    </span>
+                                                                                    <span className="flex items-center">
+                                                                                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                                            <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
+                                                                                        </svg>
+                                                                                        {signal.source}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="text-right ml-4">
+                                                                                <div className="text-2xl font-bold text-purple-600">{signal.confidence}%</div>
+                                                                                <div className="text-xs text-gray-600">Confidence</div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                                                                <p className="text-sm text-gray-600">
+                                                                    No signals detected yet. Click "Run Research" to start monitoring.
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'accounts' && (
+                            <div>
+                                <div className="mb-8">
+                                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Target Accounts</h2>
+                                    <p className="text-gray-600">Manage your ICP accounts for signal monitoring</p>
+                                </div>
+
+                                {/* Add Account Form */}
+                                <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-200">
+                                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Add New Account</h3>
+                                    <p className="text-sm text-gray-600 mb-4">Fields marked with * are required</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                        <input
+                                            type="text"
+                                            placeholder="Company Name *"
+                                            value={newAccount.company}
+                                            onChange={(e) => setNewAccount({...newAccount, company: e.target.value})}
+                                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                                            required
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Industry *"
+                                            value={newAccount.industry}
+                                            onChange={(e) => setNewAccount({...newAccount, industry: e.target.value})}
+                                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                                            required
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Company Size"
+                                            value={newAccount.size}
+                                            onChange={(e) => setNewAccount({...newAccount, size: e.target.value})}
+                                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Website"
+                                            value={newAccount.website}
+                                            onChange={(e) => setNewAccount({...newAccount, website: e.target.value})}
+                                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                                        />
+                                        <button 
+                                            onClick={addAccount}
+                                            className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium shadow-md hover:shadow-lg"
+                                        >
+                                            ➕ Add Account
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Accounts List */}
+                                <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Industry</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Website</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Signals</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {accounts.map(account => (
+                                                <tr key={account.id} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="font-medium text-gray-900">{account.company}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{account.industry}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{account.size}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{account.website}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                                                            {account.signals.length} detected
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                        <button 
+                                                            onClick={() => removeAccount(account.id)}
+                                                            className="text-red-600 hover:text-red-900 font-medium"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'signals' && (
+                            <div>
+                                <div className="mb-8 flex items-center justify-between">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Research Signals</h2>
+                                        <p className="text-gray-600">Configure sophisticated AI research prompts to detect buying signals</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => setShowSignalBuilder(true)}
+                                        className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold shadow-lg flex items-center space-x-2"
+                                    >
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd"/>
+                                        </svg>
+                                        <span>Create Signal</span>
+                                    </button>
+                                </div>
+
+                                {/* Signal Builder Modal */}
+                                {showSignalBuilder && (
+                                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                                        <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                                            <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-2xl">
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="text-2xl font-bold">
+                                                        {editingSignal ? '✏️ Edit Signal' : '🎯 Create New Signal'}
+                                                    </h3>
+                                                    <button 
+                                                        onClick={() => { setShowSignalBuilder(false); resetSignalForm(); }}
+                                                        className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors"
+                                                    >
+                                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-6 space-y-6">
+                                                {/* Basic Info */}
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                            Signal Name *
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="e.g., Hiring Signal - Engineering Roles"
+                                                            value={newSignal.name}
+                                                            onChange={(e) => setNewSignal({...newSignal, name: e.target.value})}
+                                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-lg"
+                                                        />
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                                Signal Type *
+                                                            </label>
+                                                            <select
+                                                                value={newSignal.type}
+                                                                onChange={(e) => setNewSignal({...newSignal, type: e.target.value})}
+                                                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                                                            >
+                                                                <option value="job_posting">Job Postings</option>
+                                                                <option value="content_analysis">Content Analysis</option>
+                                                                <option value="financial">Financial Events</option>
+                                                                <option value="leadership">Leadership Changes</option>
+                                                                <option value="product">Product/Service Changes</option>
+                                                                <option value="expansion">Market Expansion</option>
+                                                                <option value="custom">Custom Prompt</option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                                Category
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                placeholder="e.g., Growth, Technology"
+                                                                value={newSignal.category}
+                                                                onChange={(e) => setNewSignal({...newSignal, category: e.target.value})}
+                                                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Configuration based on type */}
+                                                <div className="bg-gray-50 p-6 rounded-xl border-2 border-gray-200 space-y-4">
+                                                    <h4 className="font-bold text-lg text-gray-800 flex items-center">
+                                                        <svg className="w-5 h-5 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
+                                                        </svg>
+                                                        Signal Configuration
+                                                    </h4>
+
+                                                    {/* Job Posting Config */}
+                                                    {newSignal.type === 'job_posting' && (
+                                                        <div className="space-y-4">
+                                                            <TagInput 
+                                                                label="Job Titles/Roles"
+                                                                placeholder="e.g., engineer, developer, data scientist"
+                                                                items={newSignal.config.jobTitles}
+                                                                onAdd={(val) => addConfigItem('jobTitles', val)}
+                                                                onRemove={(idx) => removeConfigItem('jobTitles', idx)}
+                                                            />
+                                                            <TagInput 
+                                                                label="Required Keywords"
+                                                                placeholder="e.g., AI, machine learning, cloud"
+                                                                items={newSignal.config.keywords}
+                                                                onAdd={(val) => addConfigItem('keywords', val)}
+                                                                onRemove={(idx) => removeConfigItem('keywords', idx)}
+                                                            />
+                                                            <TagInput 
+                                                                label="Exclude Keywords (Optional)"
+                                                                placeholder="e.g., intern, junior, contract"
+                                                                items={newSignal.config.excludeKeywords}
+                                                                onAdd={(val) => addConfigItem('excludeKeywords', val)}
+                                                                onRemove={(idx) => removeConfigItem('excludeKeywords', idx)}
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {/* Content Analysis Config */}
+                                                    {newSignal.type === 'content_analysis' && (
+                                                        <div className="space-y-4">
+                                                            <TagInput 
+                                                                label="Content Sources"
+                                                                placeholder="e.g., blog, press release, social media"
+                                                                items={newSignal.config.sources}
+                                                                onAdd={(val) => addConfigItem('sources', val)}
+                                                                onRemove={(idx) => removeConfigItem('sources', idx)}
+                                                            />
+                                                            <TagInput 
+                                                                label="Keywords to Monitor"
+                                                                placeholder="e.g., migration, adopting, implementing"
+                                                                items={newSignal.config.keywords}
+                                                                onAdd={(val) => addConfigItem('keywords', val)}
+                                                                onRemove={(idx) => removeConfigItem('keywords', idx)}
+                                                            />
+                                                            <TagInput 
+                                                                label="Technologies/Platforms"
+                                                                placeholder="e.g., AWS, Azure, Salesforce"
+                                                                items={newSignal.config.technologies}
+                                                                onAdd={(val) => addConfigItem('technologies', val)}
+                                                                onRemove={(idx) => removeConfigItem('technologies', idx)}
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {/* Financial Config */}
+                                                    {newSignal.type === 'financial' && (
+                                                        <div className="space-y-4">
+                                                            <TagInput 
+                                                                label="Financial Events"
+                                                                placeholder="e.g., funding, investment, acquisition"
+                                                                items={newSignal.config.events}
+                                                                onAdd={(val) => addConfigItem('events', val)}
+                                                                onRemove={(idx) => removeConfigItem('events', idx)}
+                                                            />
+                                                            <TagInput 
+                                                                label="Keywords"
+                                                                placeholder="e.g., raised, secured, allocated"
+                                                                items={newSignal.config.keywords}
+                                                                onAdd={(val) => addConfigItem('keywords', val)}
+                                                                onRemove={(idx) => removeConfigItem('keywords', idx)}
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {/* Leadership Config */}
+                                                    {(newSignal.type === 'leadership' || newSignal.type === 'product' || newSignal.type === 'expansion') && (
+                                                        <div className="space-y-4">
+                                                            <TagInput 
+                                                                label="Keywords to Monitor"
+                                                                placeholder="e.g., appointed, joined, launched"
+                                                                items={newSignal.config.keywords}
+                                                                onAdd={(val) => addConfigItem('keywords', val)}
+                                                                onRemove={(idx) => removeConfigItem('keywords', idx)}
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {/* Lookback Days */}
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                            Lookback Period (Days)
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            value={newSignal.config.lookbackDays}
+                                                            onChange={(e) => setNewSignal({
+                                                                ...newSignal,
+                                                                config: { ...newSignal.config, lookbackDays: parseInt(e.target.value) || 30 }
+                                                            })}
+                                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                                                            min="1"
+                                                            max="365"
+                                                        />
+                                                        <p className="text-xs text-gray-500 mt-1">How many days back to search for this signal</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Research Prompt */}
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <label className="block text-sm font-semibold text-gray-700">
+                                                            Research Prompt *
+                                                        </label>
+                                                        <button 
+                                                            onClick={generatePrompt}
+                                                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                                                        >
+                                                            ✨ Auto-Generate
+                                                        </button>
+                                                    </div>
+                                                    <textarea
+                                                        placeholder="Describe what the AI should research. Use {company} as placeholder for the company name."
+                                                        value={newSignal.prompt}
+                                                        onChange={(e) => setNewSignal({...newSignal, prompt: e.target.value})}
+                                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none font-mono text-sm"
+                                                        rows="5"
+                                                    />
+                                                    <p className="text-xs text-gray-500">
+                                                        💡 This prompt will be sent to GPT for each account. Be specific about what to look for.
+                                                    </p>
+                                                </div>
+
+                                                {/* Action Buttons */}
+                                                <div className="flex items-center justify-end space-x-4 pt-4 border-t-2">
+                                                    <button 
+                                                        onClick={() => { setShowSignalBuilder(false); resetSignalForm(); }}
+                                                        className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button 
+                                                        onClick={editingSignal ? updateSignal : addSignal}
+                                                        className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold shadow-lg"
+                                                    >
+                                                        {editingSignal ? '💾 Update Signal' : '✅ Create Signal'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Signals Grid */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {signals.map(signal => (
+                                        <div key={signal.id} className={`bg-white rounded-xl shadow-lg border-2 transition-all hover:shadow-xl ${signal.active ? 'border-purple-400' : 'border-gray-200'}`}>
+                                            <div className="p-6">
+                                                <div className="flex items-start justify-between mb-4">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center space-x-2 mb-2">
+                                                            <h3 className="text-xl font-bold text-gray-800">{signal.name}</h3>
+                                                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                                                                {signal.type.replace('_', ' ')}
+                                                            </span>
+                                                        </div>
+                                                        {signal.category && (
+                                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                                {signal.category}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => toggleSignal(signal.id)}
+                                                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${signal.active ? 'bg-purple-600' : 'bg-gray-300'}`}
+                                                        title={signal.active ? 'Active' : 'Inactive'}
+                                                    >
+                                                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${signal.active ? 'translate-x-6' : 'translate-x-1'}`} />
+                                                    </button>
+                                                </div>
+
+                                                <div className="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
+                                                    <p className="text-sm text-gray-700 font-mono leading-relaxed">
+                                                        {signal.prompt}
+                                                    </p>
+                                                </div>
+
+                                                {/* Config Summary */}
+                                                <div className="space-y-2 mb-4 text-sm">
+                                                    {signal.config.jobTitles?.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            <span className="font-semibold text-gray-600">Roles:</span>
+                                                            {signal.config.jobTitles.map((title, idx) => (
+                                                                <span key={idx} className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+                                                                    {title}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {signal.config.keywords?.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            <span className="font-semibold text-gray-600">Keywords:</span>
+                                                            {signal.config.keywords.map((kw, idx) => (
+                                                                <span key={idx} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                                                                    {kw}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {signal.config.technologies?.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            <span className="font-semibold text-gray-600">Tech:</span>
+                                                            {signal.config.technologies.map((tech, idx) => (
+                                                                <span key={idx} className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">
+                                                                    {tech}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    <div className="text-gray-600">
+                                                        <span className="font-semibold">Lookback:</span> {signal.config.lookbackDays} days
+                                                    </div>
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                                                    <span className={`text-sm font-semibold flex items-center ${signal.active ? 'text-green-600' : 'text-gray-500'}`}>
+                                                        {signal.active ? (
+                                                            <>
+                                                                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                                                </svg>
+                                                                Active
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+                                                                </svg>
+                                                                Inactive
+                                                            </>
+                                                        )}
+                                                    </span>
+                                                    <div className="flex items-center space-x-2">
+                                                        <button 
+                                                            onClick={() => duplicateSignal(signal)}
+                                                            className="px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium transition-colors"
+                                                            title="Duplicate"
+                                                        >
+                                                            📋 Copy
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => editSignal(signal)}
+                                                            className="px-3 py-1.5 text-purple-600 hover:bg-purple-50 rounded-lg text-sm font-medium transition-colors"
+                                                        >
+                                                            ✏️ Edit
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => removeSignal(signal.id)}
+                                                            className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors"
+                                                        >
+                                                            🗑️ Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {signals.length === 0 && (
+                                    <div className="bg-white rounded-xl shadow-sm p-12 text-center border-2 border-dashed border-gray-300">
+                                        <svg className="w-20 h-20 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                        </svg>
+                                        <h3 className="text-2xl font-semibold text-gray-700 mb-2">No signals configured</h3>
+                                        <p className="text-gray-500 mb-6">Create your first research signal to start detecting buying intent</p>
+                                        <button 
+                                            onClick={() => setShowSignalBuilder(true)}
+                                            className="px-8 py-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold shadow-lg text-lg"
+                                        >
+                                            ✨ Create Your First Signal
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {signals.length === 0 && (
+                                    <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-gray-200">
+                                        <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                        </svg>
+                                        <h3 className="text-xl font-semibold text-gray-700 mb-2">No signals configured</h3>
+                                        <p className="text-gray-500">Create your first signal to start monitoring buying intent</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="bg-white border-t border-gray-200 mt-12">
+                        <div className="container mx-auto px-6 py-6">
+                            <div className="flex items-center justify-between text-sm text-gray-600">
+                                <p>© 2025 SignalIQ - AI-Powered Sales Intelligence</p>
+                                <div className="flex items-center space-x-6">
+                                    <a href="#" className="hover:text-purple-600 transition-colors">Documentation</a>
+                                    <a href="#" className="hover:text-purple-600 transition-colors">API</a>
+                                    <a href="#" className="hover:text-purple-600 transition-colors">Support</a>
+                                </div>
+                            </div>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
